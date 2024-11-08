@@ -1,4 +1,4 @@
-# OpenWRT Version diffing tool
+**# OpenWRT Version diffing tool
 
 ## Motivation & executive summary
 
@@ -31,3 +31,13 @@ $ differ -release 23.05.5 celerway-2.12.0-86-64.manifest
 
 The look will find the OpenWRT release manifest and package index itself, then go through the supplied manifest and
 highlight any outdated packages.
+
+
+
+## Resources
+
+Default $ARCH: x86_64
+Versions: 23.05.5
+
+Package index for the base image: https://downloads.openwrt.org/releases/$VERSION/packages/$ARCH/base/Packages
+Package index for the add-on package: https://downloads.openwrt.org/releases/$VERSION/targets/$ARCH/packages/Packages
