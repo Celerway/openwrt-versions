@@ -40,4 +40,5 @@ Default $ARCH: x86_64
 Versions: 23.05.5
 
 Package index for the base image: https://downloads.openwrt.org/releases/$VERSION/packages/$ARCH/base/Packages
+
 Package index for the add-on package: https://downloads.openwrt.org/releases/$VERSION/targets/$ARCH/packages/Packages

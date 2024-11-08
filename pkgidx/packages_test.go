@@ -1,44 +1,20 @@
 package pkgidx
 
 import (
+	"bytes"
+	_ "embed"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 )
 
+//go:embed testdata/valid.Packages
+var validPackages []byte
+
 func TestParse(t *testing.T) {
-	const sampleData = `
-Package: arptables-nft
-Version: 1.8.8-2
-Depends: libc, kmod-nft-arp, xtables-nft, kmod-arptables
-Provides: arptables
-Alternatives: 300:/usr/sbin/arptables:/usr/sbin/xtables-nft-multi, 300:/usr/sbin/arptables-restore:/usr/sbin/xtables-nft-multi, 300:/usr/sbin/arptables-save:/usr/sbin/xtables-nft-multi
-License: GPL-2.0
-Section: net
-CPE-ID: cpe:/a:netfilter:iptables
-Architecture: x86_64
-Installed-Size: 2336
-Filename: arptables-nft_1.8.8-2_x86_64.ipk
-Size: 3138
-SHA256sum: 1ccb8c52d7ee035981a6743dd6312911b16f10502c1d3d6569fd855d46a09467
-Description:  ARP firewall administration tool nft
 
-Package: base-files
-Version: 1562-r24106-10cc5fcd00
-Depends: libc, netifd, jsonfilter, usign, openwrt-keyring, fstools, fwtool
-License: GPL-2.0
-Section: base
-Architecture: x86_64
-Installed-Size: 47357
-Filename: base-files_1562-r24106-10cc5fcd00_x86_64.ipk
-Size: 48353
-SHA256sum: e57f1bcadbf00584cadef4c9a0a24025e159f45a93944ec222858c1027a1adde
-Description:  This package contains a base filesystem and system scripts for OpenWrt.
-`
-
-	packages, err := Parse(strings.NewReader(sampleData))
+	packages, err := Parse(bytes.NewReader(validPackages))
 	if err != nil {
 		t.Fatalf("Parse failed: %v", err)
 	}
@@ -102,14 +78,12 @@ func TestLoadFromURL_Error(t *testing.T) {
 	}
 }
 
-func TestLoadFromManifest(t *testing.T) {
-	const sampleData = `
-6in4 - 28
-6rd - 12
-admb - 2017-02-01-1.4
-`
+//go:embed testdata/valid.manifest
+var validManifest []byte
 
-	packages, err := LoadFromManifest(strings.NewReader(sampleData))
+func TestLoadFromManifest(t *testing.T) {
+
+	packages, err := LoadFromManifest(bytes.NewReader(validManifest))
 	if err != nil {
 		t.Fatalf("LoadFromManifest failed: %v", err)
 	}
@@ -129,14 +103,33 @@ admb - 2017-02-01-1.4
 	// Add similar assertions for other packages as needed
 }
 
-func TestLoadFromManifest_InvalidFormat(t *testing.T) {
-	const invalidData = `
-invalid-line
-another-invalid-line
-`
+//go:embed testdata/invalid.0.manifest
+var invalidManifest0 []byte
 
-	_, err := LoadFromManifest(strings.NewReader(invalidData))
-	if err == nil {
-		t.Error("Expected an error for invalid line format")
+//go:embed testdata/invalid.1.manifest
+var invalidManifest1 []byte
+
+//go:embed testdata/invalid.2.manifest
+var invalidManifest2 []byte
+
+func TestLoadFromManifest_InvalidFormat(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest []byte
+	}{
+		{"invalid.0", invalidManifest0},
+		{"invalid.1", invalidManifest1},
+		{"invalid.2", invalidManifest2},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, err := LoadFromManifest(bytes.NewReader(tt.manifest))
+			if err == nil {
+				t.Error("Expected an error for invalid line format")
+			}
+			if res != nil {
+				t.Error("Expected nil result for invalid manifest")
+			}
+		})
 	}
 }
