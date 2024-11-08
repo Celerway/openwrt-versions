@@ -111,3 +111,32 @@ func Parse(r io.Reader) ([]Package, error) {
 
 	return packages, nil
 }
+
+func LoadFromManifest(r io.Reader) ([]Package, error) {
+	var packages []Package
+	scanner := bufio.NewScanner(r)
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		// Split on " - "
+		parts := strings.Split(line, " - ")
+		// Split by whitespace
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid line format: %s", line)
+		}
+
+		packages = append(packages, Package{
+			Name:    parts[0],
+			Version: parts[1],
+		})
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("failed to scan input: %w", err)
+	}
+
+	return packages, nil
+}

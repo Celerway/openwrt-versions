@@ -101,3 +101,42 @@ func TestLoadFromURL_Error(t *testing.T) {
 		t.Error("Expected an error for a non-200 status code")
 	}
 }
+
+func TestLoadFromManifest(t *testing.T) {
+	const sampleData = `
+6in4 - 28
+6rd - 12
+admb - 2017-02-01-1.4
+`
+
+	packages, err := LoadFromManifest(strings.NewReader(sampleData))
+	if err != nil {
+		t.Fatalf("LoadFromManifest failed: %v", err)
+	}
+
+	if len(packages) != 3 {
+		t.Errorf("Expected 3 packages, got %d", len(packages))
+	}
+
+	// Check the fields of the first package
+	if packages[0].Name != "6in4" {
+		t.Errorf("Expected package name '6in4', got '%s'", packages[0].Name)
+	}
+	if packages[0].Version != "28" {
+		t.Errorf("Expected package version '28', got '%s'", packages[0].Version)
+	}
+
+	// Add similar assertions for other packages as needed
+}
+
+func TestLoadFromManifest_InvalidFormat(t *testing.T) {
+	const invalidData = `
+invalid-line
+another-invalid-line
+`
+
+	_, err := LoadFromManifest(strings.NewReader(invalidData))
+	if err == nil {
+		t.Error("Expected an error for invalid line format")
+	}
+}
