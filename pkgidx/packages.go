@@ -88,7 +88,10 @@ func Parse(r io.Reader) ([]Package, error) {
 			case "Architecture":
 				currentPackage.Architecture = value
 			case "Installed-Size":
-				fmt.Sscanf(value, "%d", &currentPackage.InstalledSize)
+				n, err := fmt.Sscanf(value, "%d", &currentPackage.InstalledSize)
+				if err != nil || n != 1 {
+					return nil, fmt.Errorf("failed to parse Installed-Size: %w", err)
+				}
 			case "Filename":
 				currentPackage.Filename = value
 			case "Size":
