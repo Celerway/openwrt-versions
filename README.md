@@ -2,18 +2,19 @@
 
 ## Motivation & executive summary
 
-We should have a way to track differences in versions across versions of our firmware compared to upstream releases.
+We should have a way to track differences in versions across versions of custom firmware release compared to upstream
+releases.
 
 ## Things to note:
 
-OpenWRT produces a manifest file with the packaged versions of the packages in a release.
-OpenWRT is a very minimal operating system that doesn’t have many packages; ~130 in total. Our distribution has about
-550 packages.
-Just comparing the manifest is not enough. We also need to figure out the OpenWRT versions of the packages that OpenWRT
-doesn't ship, but are available as add-ons in OpenWRT.
-So, on our side we just need the build manifest.
-On the OpenWRT side we need the equivalent build manifest as well as the complete package
-index (https://downloads.openwrt.org/releases/23.05.5/targets/x86/64/packages/Packages)
+* OpenWRT produces a manifest file with the packaged versions of the packages in a release.
+* OpenWRT is a very minimal operating system that doesn’t have many packages; ~130 in total. Downstream distributions
+  might have more packages.
+* Just comparing the manifest is not enough. We also need to figure out the OpenWRT versions of the packages that
+  OpenWRT doesn't ship, but are available as add-ons in OpenWRT.
+* We need the build manifest for the custom firmware.
+* On the OpenWRT side we need the equivalent build manifest as well as the complete package
+  index (https://downloads.openwrt.org/releases/23.05.5/targets/x86/64/packages/Packages)
 
 ## How it works
 
