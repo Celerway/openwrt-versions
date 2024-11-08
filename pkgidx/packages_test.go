@@ -133,3 +133,39 @@ func TestLoadFromManifest_InvalidFormat(t *testing.T) {
 		})
 	}
 }
+
+func TestCompareOpenWrtVersions(t *testing.T) {
+	var testCases = []struct {
+		v1       string
+		v2       string
+		expected int
+	}{
+		// Basic comparisons
+		{"1.0.0-r1", "1.0.0-r2", -1}, // v2 is newer (higher revision)
+		{"1.0.0-r1", "1.0.1-r0", -1}, // v2 is newer (higher version)
+		{"1.0.1-r0", "1.0.0-r2", 1},  // v1 is newer (higher version)
+		{"1.0.0-r1", "1.0.0-r1", 0},  // Equal
+
+		// Epoch comparisons
+		{"1:1.0.0-r1", "2:1.0.0-r0", -1}, // v2 is newer (higher epoch)
+		{"2:1.0.0-r0", "1:1.0.0-r1", 1},  // v1 is newer (higher epoch)
+
+		// Edge cases
+		{"1.0.0", "1.0.0-r1", -1},     // v2 is newer (has revision)
+		{"1.0.0-r1", "1.0.0", 1},      // v1 is newer (has revision)
+		{"1.0.0-r1", "1.0.0-r10", -1}, // v2 is newer (higher revision)
+
+		// weird stuff:
+		{"a", "b", -1}, // v2 is newer (higher letter)
+		{"1.2.3.4.5.6.7.8.9.10", "1.2.3.4.5.6.7.8.9.20", -1},
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("%s vs %s", tc.v1, tc.v2), func(t *testing.T) {
+			actual := compareOpenWrtVersions(tc.v1, tc.v2)
+			if actual != tc.expected {
+				t.Errorf("Expected %d, got %d", tc.expected, actual)
+			}
+		})
+	}
+}
