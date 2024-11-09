@@ -26,19 +26,16 @@ ignore. If the package has the same version, ignore it, if our package is outdat
 The resulting cli should work like this:
 
 ```shell
-$ differ -release 23.05.5 celerway-2.12.0-86-64.manifest
+$ openwrt-versions -release 23.05.5 celerway-2.12.0-86-64.manifest
+Name           | Upstream               | Downstream            
+---------------+------------------------+-----------------------
+base-files     | 1562-r24106-10cc5fcd00 | 1586-r24106-10cc5fcd00
+ipset          | 7.17-1                 | 7.6-1                 
+libipset13     | 7.17-1                 | 7.6-1                 
+ugps           | 2021-06-08-5e88403f-2  | 2022-02-19-fb87d0fd-2 
+wireless-regdb | 2024.10.07-1           | 2024.07.04-1          
 ```
 
 The look will find the OpenWRT release manifest and package index itself, then go through the supplied manifest and
 highlight any outdated packages.
 
-
-
-## Resources
-
-Default $ARCH: x86_64
-Versions: 23.05.5
-
-Package index for the base image: https://downloads.openwrt.org/releases/$VERSION/packages/$ARCH/base/Packages
-
-Package index for the add-on package: https://downloads.openwrt.org/releases/$VERSION/targets/$ARCH/packages/Packages
