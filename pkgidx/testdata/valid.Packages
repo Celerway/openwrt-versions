@@ -24,3 +24,22 @@ Filename: base-files_1562-r24106-10cc5fcd00_x86_64.ipk
 Size: 48353
 SHA256sum: e57f1bcadbf00584cadef4c9a0a24025e159f45a93944ec222858c1027a1adde
 Description:  This package contains a base filesystem and system scripts for OpenWrt.
+
+Package: kmod-3c59x
+Version: 5.15.167-1
+Depends: kernel (=5.15.167-1-59d1431675acc6823a33c7eb2323daeb), kmod-mii
+License: GPL-2.0-only
+Section: kernel
+Architecture: x86_64
+Installed-Size: 21718
+Filename: kmod-3c59x_5.15.167-1_x86_64.ipk
+Size: 22647
+SHA256sum: 4d0d45373a518b4d0118c74008c39a2a7bd48b1aa51f58627a1aedcbf35dbdef
+Description:  This option enables driver support for a large number of 10mbps and
+ 10/100mbps EISA, PCI and PCMCIA 3Com Ethernet adapters:
+ - "Vortex"    (Fast EtherLink 3c590/3c592/3c595/3c597) EISA and PCI
+ - "Boomerang" (EtherLink XL 3c900 or 3c905)            PCI
+ - "Cyclone"   (3c540/3c900/3c905/3c980/3c575/3c656)    PCI and Cardbus
+ - "Tornado"   (3c905)                                  PCI
+ - "Hurricane" (3c555/3cSOHO)                           PCI
+
