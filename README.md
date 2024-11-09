@@ -39,3 +39,15 @@ wireless-regdb | 2024.10.07-1           | 2024.07.04-1
 The look will find the OpenWRT release manifest and package index itself, then go through the supplied manifest and
 highlight any outdated packages.
 
+
+## Building the tool
+
+```shell
+go build -o bin/openwrt-versions .
+```
+
+## Development hygiene
+
+```shell
+golangci-lint run
+```
