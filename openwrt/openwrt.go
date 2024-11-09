@@ -4,20 +4,18 @@ package openwrt
 import "strings"
 
 const (
-	basePackages  = "https://downloads.openwrt.org/releases/$VERSION/packages/$ARCH/base/Packages"
-	addOnPackages = "https://downloads.openwrt.org/releases/$VERSION/targets/$ARCH/packages/Packages"
+	basePackages  = "https://downloads.openwrt.org/releases/$VERSION/packages/x86_64/base/Packages"
+	addOnPackages = "https://downloads.openwrt.org/releases/$VERSION/targets/x86/64/packages/Packages"
 )
 
-func GetBasePackageUrl(version, arch string) string {
+func GetBasePackageUrl(version string) string {
 	url := basePackages
 	url = strings.Replace(url, "$VERSION", version, 1)
-	url = strings.Replace(url, "$ARCH", arch, 1)
 	return url
 }
 
-func GetAddOnPackageUrl(version, arch string) string {
+func GetAddOnPackageUrl(version string) string {
 	url := addOnPackages
 	url = strings.Replace(url, "$VERSION", version, 1)
-	url = strings.Replace(url, "$ARCH", arch, 1)
 	return url
 }
