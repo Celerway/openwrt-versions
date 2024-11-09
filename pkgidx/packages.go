@@ -2,6 +2,7 @@ package pkgidx
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,20 +14,8 @@ import (
 
 // Package represents a single package entry.
 type Package struct {
-	Name          string
-	Version       string
-	Depends       []string
-	Provides      string
-	Alternatives  []string
-	License       string
-	Section       string
-	CPEID         string
-	Architecture  string
-	InstalledSize int
-	Filename      string
-	Size          int
-	SHA256sum     string
-	Description   string
+	Name    string
+	Version string
 }
 
 type PackageList []Package
@@ -38,95 +27,79 @@ type Diff struct {
 }
 
 // LoadFromURL loads package information from a given HTTP URL.
-func LoadFromURL(url string) ([]Package, error) {
-	resp, err := http.Get(url)
+func LoadFromURL(ctx context.Context, url string) ([]Package, error) {
+	// Create a new HTTP request, with a context that can be cancelled
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch URL: %w", err)
+		return nil, fmt.Errorf("http.NewRequestWithContext: %w", err)
+	}
+
+	// Send the HTTP request
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("http.DefaultClient.Do: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("HTTP request failed with status: %s", resp.Status)
+	parsed, err := Parse(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("Parse: %w", err)
 	}
-
-	return Parse(resp.Body)
+	return parsed, nil
 }
 
 // Parse parses package information from an io.Reader.
-func Parse(r io.Reader) ([]Package, error) {
+func Parse(r io.Reader) (PackageList, error) {
 	var packages []Package
 	var currentPackage *Package
 	scanner := bufio.NewScanner(r)
-
+	var entry []byte
 	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.TrimSpace(line) == "" {
-			if currentPackage != nil {
-				packages = append(packages, *currentPackage)
-				currentPackage = nil
+		// look for the start of a new package entry:
+		if strings.HasPrefix(scanner.Text(), "Package: ") {
+			if len(entry) == 0 { // first package
+				entry = append(entry, scanner.Bytes()...)
+				entry = append(entry, '\n')
+				continue
 			}
-			continue
+			// this wasn't the first package, parse the current buffer and add it to the list
+			currentPackage = parsePackage(entry)
+			packages = append(packages, *currentPackage)
+			entry = entry[:0] // reset entry buffer
 		}
-
-		parts := strings.SplitN(line, ":", 2)
-		if len(parts) != 2 {
-			return nil, fmt.Errorf("invalid line format: %s", line)
-		}
-		key := strings.TrimSpace(parts[0])
-		value := strings.TrimSpace(parts[1])
-
-		if key == "Package" {
-			if currentPackage != nil {
-				packages = append(packages, *currentPackage)
-			}
-			currentPackage = &Package{Name: value}
-		} else if currentPackage != nil {
-			switch key {
-			case "Version":
-				currentPackage.Version = value
-			case "Depends":
-				currentPackage.Depends = strings.Split(value, ", ")
-			case "Provides":
-				currentPackage.Provides = value
-			case "Alternatives":
-				currentPackage.Alternatives = strings.Split(value, ", ")
-			case "License":
-				currentPackage.License = value
-			case "Section":
-				currentPackage.Section = value
-			case "CPE-ID":
-				currentPackage.CPEID = value
-			case "Architecture":
-				currentPackage.Architecture = value
-			case "Installed-Size":
-				n, err := fmt.Sscanf(value, "%d", &currentPackage.InstalledSize)
-				if err != nil || n != 1 {
-					return nil, fmt.Errorf("failed to parse Installed-Size: %w", err)
-				}
-			case "Filename":
-				currentPackage.Filename = value
-			case "Size":
-				fmt.Sscanf(value, "%d", &currentPackage.Size)
-			case "SHA256sum":
-				currentPackage.SHA256sum = value
-			case "Description":
-				currentPackage.Description = value
-			}
-		}
+		// append the line to the current entry
+		entry = append(entry, scanner.Bytes()...)
+		entry = append(entry, '\n')
 	}
-
-	if currentPackage != nil {
+	// parse the last package:
+	if len(entry) > 0 {
+		currentPackage = parsePackage(entry)
+		entry = entry[:0]
 		packages = append(packages, *currentPackage)
 	}
-
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("failed to scan input: %w", err)
 	}
-
 	return packages, nil
 }
 
-func LoadFromManifest(r io.Reader) ([]Package, error) {
+func parsePackage(entry []byte) *Package {
+	p := &Package{}
+	scanner := bufio.NewScanner(strings.NewReader(string(entry)))
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "Package: ") {
+			p.Name = strings.TrimPrefix(line, "Package: ")
+		} else if strings.HasPrefix(line, "Version: ") {
+			p.Version = strings.TrimPrefix(line, "Version: ")
+		}
+	}
+	return p
+}
+
+func LoadFromManifest(r io.Reader) (PackageList, error) {
 	var packages []Package
 	scanner := bufio.NewScanner(r)
 
@@ -156,6 +129,7 @@ func LoadFromManifest(r io.Reader) ([]Package, error) {
 }
 
 // Equals - compares two Package slices for equality wrt versions.
+// you run this on the downstream with the upstream as the argument
 func (a PackageList) Equals(b PackageList) []Diff {
 	diff := make([]Diff, 0)
 	for _, pkgA := range a {
@@ -165,8 +139,8 @@ func (a PackageList) Equals(b PackageList) []Diff {
 				if pkgA.Version != pkgB.Version {
 					diff = append(diff, Diff{
 						Name:              pkgA.Name,
-						UpstreamVersion:   pkgA.Version,
-						DownstreamVersion: pkgB.Version,
+						DownstreamVersion: pkgA.Version,
+						UpstreamVersion:   pkgB.Version,
 					})
 				}
 			}

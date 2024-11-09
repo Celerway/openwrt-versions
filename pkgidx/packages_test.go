@@ -2,6 +2,7 @@ package pkgidx
 
 import (
 	"bytes"
+	"context"
 	_ "embed"
 	"fmt"
 	"net/http"
@@ -13,18 +14,18 @@ import (
 var validPackages []byte
 
 func TestParse(t *testing.T) {
-
 	packages, err := Parse(bytes.NewReader(validPackages))
 	if err != nil {
 		t.Fatalf("Parse failed: %v", err)
 	}
 
-	if len(packages) != 2 {
+	if len(packages) != 3 {
 		t.Errorf("Expected 2 packages, got %d", len(packages))
 	}
 
 	// Add assertions to check specific fields of the parsed packages
 	// For example:
+
 	if packages[0].Name != "arptables-nft" {
 		t.Errorf("Expected package name 'arptables-nft', got '%s'", packages[0].Name)
 	}
@@ -44,13 +45,13 @@ Description: A test package`)
 	defer ts.Close()
 
 	// Test LoadFromURL with the test server's URL
-	packages, err := LoadFromURL(ts.URL)
+	packages, err := LoadFromURL(context.TODO(), ts.URL)
 	if err != nil {
 		t.Fatalf("LoadFromURL failed: %v", err)
 	}
 
 	if len(packages) != 1 {
-		t.Errorf("Expected 1 package, got %d", len(packages))
+		t.Fatalf("Expected 1 package, got %d", len(packages))
 	}
 
 	if packages[0].Name != "test-package" {
@@ -60,7 +61,7 @@ Description: A test package`)
 
 func TestLoadFromURL_Error(t *testing.T) {
 	// Test with an invalid URL
-	_, err := LoadFromURL("invalid-url")
+	_, err := LoadFromURL(context.TODO(), "invalid-url")
 	if err == nil {
 		t.Error("Expected an error for an invalid URL")
 	}
@@ -72,7 +73,7 @@ func TestLoadFromURL_Error(t *testing.T) {
 	defer ts.Close()
 
 	// Test with the error-returning server
-	_, err = LoadFromURL(ts.URL)
+	_, err = LoadFromURL(context.TODO(), ts.URL)
 	if err == nil {
 		t.Error("Expected an error for a non-200 status code")
 	}
@@ -88,15 +89,15 @@ func TestLoadFromManifest(t *testing.T) {
 		t.Fatalf("LoadFromManifest failed: %v", err)
 	}
 
-	if len(packages) != 3 {
-		t.Errorf("Expected 3 packages, got %d", len(packages))
+	if len(packages) != 127 {
+		t.Errorf("Expected 127 packages, got %d", len(packages))
 	}
 
 	// Check the fields of the first package
-	if packages[0].Name != "6in4" {
+	if packages[0].Name != "base-files" {
 		t.Errorf("Expected package name '6in4', got '%s'", packages[0].Name)
 	}
-	if packages[0].Version != "28" {
+	if packages[0].Version != "1562-r24106-10cc5fcd00" {
 		t.Errorf("Expected package version '28', got '%s'", packages[0].Version)
 	}
 
@@ -168,4 +169,46 @@ func TestCompareOpenWrtVersions(t *testing.T) {
 			}
 		})
 	}
+}
+
+//go:embed testdata/23.05.5.base.Packages
+var basePackages []byte
+
+//go:embed testdata/23.05.5.addons.Packages
+var addonsPackages []byte
+
+//go:embed testdata/release_1.0.0.manifest
+var releaseManifest []byte
+
+func TestDiffing(t *testing.T) {
+	manifest := bytes.NewReader(releaseManifest)
+	upstream, err := Parse(bytes.NewReader(basePackages))
+	if err != nil {
+		t.Fatalf("Parse failed(base): %v", err)
+	}
+	fmt.Printf("Loaded %d upstream base packages\n", len(upstream))
+	addons, err := Parse(bytes.NewReader(addonsPackages))
+	if err != nil {
+		t.Fatalf("Parse failed(addons): %v", err)
+	}
+	fmt.Printf("Loaded %d upstream addon packages\n", len(addons))
+	// add the addons to the upstream packages:
+	upstream = append(upstream, addons...)
+
+	// Load the downstream manifest
+	downstream, err := LoadFromManifest(manifest)
+	if err != nil {
+		t.Fatalf("LoadFromManifest failed: %v", err)
+	}
+	fmt.Printf("Loaded %d downstream packages\n", len(downstream))
+
+	// Perform the diff
+	delta := downstream.Equals(upstream)
+	fmt.Printf("Found %d differences\n", len(delta))
+
+	// Check the diff results
+	for _, diff := range delta {
+		t.Logf("Package %s: upstream=%s, downstream=%s", diff.Name, diff.UpstreamVersion, diff.DownstreamVersion)
+	}
+
 }
