@@ -76,7 +76,6 @@ func Parse(r io.Reader) (PackageList, error) {
 	// parse the last package:
 	if len(entry) > 0 {
 		currentPackage = parsePackage(entry)
-		entry = entry[:0]
 		packages = append(packages, *currentPackage)
 	}
 	if err := scanner.Err(); err != nil {
