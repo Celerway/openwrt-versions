@@ -43,7 +43,7 @@ highlight any outdated packages.
 ## Building the tool
 
 ```shell
-go build -o bin/openwrt-versions .
+CGO_ENABLED=0 go build -o bin/openwrt-versions .
 ```
 
 ## Development hygiene
