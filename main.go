@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"flag"
 	"fmt"
 	"github.com/celerway/openwrt-versions/openwrt"
@@ -13,6 +14,9 @@ import (
 	"syscall"
 )
 
+//go:embed .version
+var embeddedVersion string
+
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
@@ -23,6 +27,7 @@ func main() {
 }
 
 func run(ctx context.Context, args []string) error {
+	fmt.Printf("OpenWRT package version comparison tool version %s\n", embeddedVersion)
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	version := fs.String("version", "", "Version for upstream")

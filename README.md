@@ -51,3 +51,12 @@ CGO_ENABLED=0 go build -o bin/openwrt-versions .
 ```shell
 golangci-lint run
 ```
+
+## Tag a release:
+
+Use `bump` to tag a release:
+
+```shell
+bump (-patch|-minor|-major)
+```
+See [bump](https://github.com/celerway/bump) for more information and source.
