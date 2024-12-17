@@ -56,15 +56,12 @@ func run(ctx context.Context, args []string) error {
 	// UpstreamPackages = append(UpstreamPackages, addonPackages...)
 	mergedPackages := make(map[string]string)
 	for name, pkg := range UpstreamPackages {
+		// fmt.Println(name)
 		mergedPackages[name] = pkg
 	}
 	for name, pkg := range addonPackages {
-		if existingPkg, exists := mergedPackages[name]; exists {
-			// Handle merging logic if needed, for now, we just overwrite
-			mergedPackages[name] = existingPkg
-		} else {
-			mergedPackages[name] = pkg
-		}
+		// fmt.Println(name)
+		mergedPackages[name] = pkg
 	}
 	UpstreamPackages = mergedPackages
 
@@ -85,7 +82,7 @@ func run(ctx context.Context, args []string) error {
 	}
 
 	// Compare the two package lists
-	differences := downstreamPackages.Equals(UpstreamPackages)
+	differences, cwyOnly := downstreamPackages.Equals(UpstreamPackages)
 	if *verbose {
 		fmt.Println("OpenWRT version used (x86_64): ", *version)
 		fmt.Println("base url: ", baseUrl)
@@ -116,6 +113,35 @@ func run(ctx context.Context, args []string) error {
 
 	// Print the package information
 	for _, pkg := range differences {
+		fmt.Printf("%-*s | %-*s | %-*s\n", nameWidth, pkg.Name, upstreamWidth, pkg.UpstreamVersion, downstreamWidth, pkg.DownstreamVersion)
+	}
+
+	fmt.Println()
+
+	fmt.Println("Packages only in CelerwayOS:")
+	fmt.Println("Press enter to see the packages")
+	_, err = fmt.Scanln()
+	if err != nil {
+		return fmt.Errorf("scanln: %w", err)
+	}
+
+	nameWidth = 0
+	upstreamWidth = 0
+	downstreamWidth = 0
+	for _, pkg := range cwyOnly {
+		if len(pkg.Name) > nameWidth {
+			nameWidth = len(pkg.Name)
+		}
+		if len(pkg.UpstreamVersion) > upstreamWidth {
+			upstreamWidth = len(pkg.UpstreamVersion)
+		}
+		if len(pkg.DownstreamVersion) > downstreamWidth {
+			downstreamWidth = len(pkg.DownstreamVersion)
+		}
+	}
+
+	// Print the package information
+	for _, pkg := range cwyOnly {
 		fmt.Printf("%-*s | %-*s | %-*s\n", nameWidth, pkg.Name, upstreamWidth, pkg.UpstreamVersion, downstreamWidth, pkg.DownstreamVersion)
 	}
 

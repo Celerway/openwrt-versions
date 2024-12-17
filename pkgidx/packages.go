@@ -134,8 +134,9 @@ func LoadFromManifest(r io.Reader) (PackageMap, error) {
 
 // Equals - compares two Package slices for equality wrt versions.
 // you run this on the downstream with the upstream as the argument
-func (a PackageMap) Equals(b PackageMap) []Diff {
+func (a PackageMap) Equals(b PackageMap) ([]Diff, []Diff) {
 	diff := make([]Diff, 0)
+	ours := make([]Diff, 0)
 	for name, versionA := range a {
 		if versionB, ok := b[name]; ok {
 			if versionA != versionB {
@@ -146,23 +147,14 @@ func (a PackageMap) Equals(b PackageMap) []Diff {
 				})
 			}
 		} else {
-			diff = append(diff, Diff{
+			ours = append(ours, Diff{
 				Name:              name,
 				DownstreamVersion: versionA,
 				UpstreamVersion:   "",
 			})
 		}
 	}
-	for name, versionB := range b {
-		if _, ok := a[name]; !ok {
-			diff = append(diff, Diff{
-				Name:              name,
-				DownstreamVersion: "",
-				UpstreamVersion:   versionB,
-			})
-		}
-	}
-	return diff
+	return diff, ours
 }
 
 // CompareOpenWrtVersions compares two OpenWrt package versions.

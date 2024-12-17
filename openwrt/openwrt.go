@@ -5,7 +5,7 @@ import "strings"
 
 const (
 	basePackages  = "https://downloads.openwrt.org/releases/$VERSION/packages/x86_64/base/Packages"
-	addOnPackages = "https://downloads.openwrt.org/releases/$VERSION/targets/x86/64/packages/Packages"
+	addOnPackages = "https://downloads.openwrt.org/releases/$VERSION/packages/x86_64/packages/Packages"
 )
 
 func GetBasePackageUrl(version string) string {

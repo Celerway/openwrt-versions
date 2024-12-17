@@ -215,7 +215,7 @@ func TestDiffing(t *testing.T) {
 	fmt.Printf("Loaded %d downstream packages\n", len(downstream))
 
 	// Perform the diff
-	delta := downstream.Equals(upstream)
+	delta, _ := downstream.Equals(upstream)
 	fmt.Printf("Found %d differences\n", len(delta))
 
 	// Check the diff results
