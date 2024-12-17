@@ -18,7 +18,7 @@ type Package struct {
 	Version string
 }
 
-type PackageList []Package
+type PackageMap map[string]string
 
 type Diff struct {
 	Name              string
@@ -27,7 +27,7 @@ type Diff struct {
 }
 
 // LoadFromURL loads package information from a given HTTP URL.
-func LoadFromURL(ctx context.Context, url string) ([]Package, error) {
+func LoadFromURL(ctx context.Context, url string) (PackageMap, error) {
 	// Create a new HTTP request, with a context that can be cancelled
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -51,9 +51,9 @@ func LoadFromURL(ctx context.Context, url string) ([]Package, error) {
 }
 
 // Parse parses package information from an io.Reader.
-func Parse(r io.Reader) (PackageList, error) {
-	var packages []Package
-	var currentPackage *Package
+func Parse(r io.Reader) (PackageMap, error) {
+	packages := make(map[string]string)
+	var currentPackage map[string]string
 	scanner := bufio.NewScanner(r)
 	var entry []byte
 	for scanner.Scan() {
@@ -64,9 +64,11 @@ func Parse(r io.Reader) (PackageList, error) {
 				entry = append(entry, '\n')
 				continue
 			}
-			// this wasn't the first package, parse the current buffer and add it to the list
+			// this wasn't the first package, parse the current buffer and add it to the map
 			currentPackage = parsePackage(entry)
-			packages = append(packages, *currentPackage)
+			for k, v := range currentPackage {
+				packages[k] = v
+			}
 			entry = entry[:0] // reset entry buffer
 		}
 		// append the line to the current entry
@@ -76,7 +78,9 @@ func Parse(r io.Reader) (PackageList, error) {
 	// parse the last package:
 	if len(entry) > 0 {
 		currentPackage = parsePackage(entry)
-		packages = append(packages, *currentPackage)
+		for k, v := range currentPackage {
+			packages[k] = v
+		}
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("failed to scan input: %w", err)
@@ -84,22 +88,26 @@ func Parse(r io.Reader) (PackageList, error) {
 	return packages, nil
 }
 
-func parsePackage(entry []byte) *Package {
-	p := &Package{}
+func parsePackage(entry []byte) PackageMap {
+	p := make(map[string]string)
 	scanner := bufio.NewScanner(strings.NewReader(string(entry)))
+	var name, version string
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.HasPrefix(line, "Package: ") {
-			p.Name = strings.TrimPrefix(line, "Package: ")
+			name = strings.TrimPrefix(line, "Package: ")
 		} else if strings.HasPrefix(line, "Version: ") {
-			p.Version = strings.TrimPrefix(line, "Version: ")
+			version = strings.TrimPrefix(line, "Version: ")
 		}
+	}
+	if name != "" && version != "" {
+		p[name] = version
 	}
 	return p
 }
 
-func LoadFromManifest(r io.Reader) (PackageList, error) {
-	var packages []Package
+func LoadFromManifest(r io.Reader) (PackageMap, error) {
+	packages := make(map[string]string)
 	scanner := bufio.NewScanner(r)
 
 	for scanner.Scan() {
@@ -114,10 +122,7 @@ func LoadFromManifest(r io.Reader) (PackageList, error) {
 			return nil, fmt.Errorf("invalid line format: %s", line)
 		}
 
-		packages = append(packages, Package{
-			Name:    parts[0],
-			Version: parts[1],
-		})
+		packages[parts[0]] = parts[1]
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -129,20 +134,32 @@ func LoadFromManifest(r io.Reader) (PackageList, error) {
 
 // Equals - compares two Package slices for equality wrt versions.
 // you run this on the downstream with the upstream as the argument
-func (a PackageList) Equals(b PackageList) []Diff {
+func (a PackageMap) Equals(b PackageMap) []Diff {
 	diff := make([]Diff, 0)
-	for _, pkgA := range a {
-		for _, pkgB := range b {
-			// check if the package names are the same:
-			if pkgA.Name == pkgB.Name {
-				if pkgA.Version != pkgB.Version {
-					diff = append(diff, Diff{
-						Name:              pkgA.Name,
-						DownstreamVersion: pkgA.Version,
-						UpstreamVersion:   pkgB.Version,
-					})
-				}
+	for name, versionA := range a {
+		if versionB, ok := b[name]; ok {
+			if versionA != versionB {
+				diff = append(diff, Diff{
+					Name:              name,
+					DownstreamVersion: versionA,
+					UpstreamVersion:   versionB,
+				})
 			}
+		} else {
+			diff = append(diff, Diff{
+				Name:              name,
+				DownstreamVersion: versionA,
+				UpstreamVersion:   "",
+			})
+		}
+	}
+	for name, versionB := range b {
+		if _, ok := a[name]; !ok {
+			diff = append(diff, Diff{
+				Name:              name,
+				DownstreamVersion: "",
+				UpstreamVersion:   versionB,
+			})
 		}
 	}
 	return diff

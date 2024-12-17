@@ -26,12 +26,15 @@ func TestParse(t *testing.T) {
 	// Add assertions to check specific fields of the parsed packages
 	// For example:
 
-	if packages[0].Name != "arptables-nft" {
-		t.Errorf("Expected package name 'arptables-nft', got '%s'", packages[0].Name)
+	// Check the fields of the first package in the map
+	if _, ok := packages["arptables-nft"]; !ok {
+		t.Errorf("Expected package name 'arptables-nft' to be in packages")
 	}
-	if packages[1].Version != "1562-r24106-10cc5fcd00" {
-		t.Errorf("Expected package version '1562-r24106-10cc5fcd00', got '%s'", packages[1].Version)
+
+	if v, ok := packages["base-files"]; ok && v != "1562-r24106-10cc5fcd00" {
+		t.Errorf("Expected package version '1562-r24106-10cc5fcd00', got '%s'", v)
 	}
+
 	// ... add more assertions as needed
 }
 
@@ -54,8 +57,8 @@ Description: A test package`)
 		t.Fatalf("Expected 1 package, got %d", len(packages))
 	}
 
-	if packages[0].Name != "test-package" {
-		t.Errorf("Expected package name 'test-package', got '%s'", packages[0].Name)
+	if _, ok := packages["test-package"]; !ok {
+		t.Errorf("Expected package name 'test-package' to be in packages")
 	}
 }
 
@@ -94,11 +97,12 @@ func TestLoadFromManifest(t *testing.T) {
 	}
 
 	// Check the fields of the first package
-	if packages[0].Name != "base-files" {
-		t.Errorf("Expected package name '6in4', got '%s'", packages[0].Name)
+	if _, ok := packages["base-files"]; !ok {
+		t.Errorf("Expected package name 'base-files' to be in packages")
 	}
-	if packages[0].Version != "1562-r24106-10cc5fcd00" {
-		t.Errorf("Expected package version '28', got '%s'", packages[0].Version)
+
+	if v, ok := packages["base-files"]; ok && v != "1562-r24106-10cc5fcd00" {
+		t.Errorf("Expected package version '1562-r24106-10cc5fcd00', got '%s'", v)
 	}
 
 	// Add similar assertions for other packages as needed
@@ -192,8 +196,16 @@ func TestDiffing(t *testing.T) {
 		t.Fatalf("Parse failed(addons): %v", err)
 	}
 	fmt.Printf("Loaded %d upstream addon packages\n", len(addons))
+
 	// add the addons to the upstream packages:
-	upstream = append(upstream, addons...)
+	mergedPackages := make(map[string]string)
+	for name, pkg := range upstream {
+		mergedPackages[name] = pkg
+	}
+	for name, pkg := range addons {
+		mergedPackages[name] = pkg
+	}
+	upstream = mergedPackages
 
 	// Load the downstream manifest
 	downstream, err := LoadFromManifest(manifest)
