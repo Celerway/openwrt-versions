@@ -5,13 +5,14 @@ import (
 	_ "embed"
 	"flag"
 	"fmt"
-	"github.com/celerway/openwrt-versions/openwrt"
-	"github.com/celerway/openwrt-versions/pkgidx"
 	"io"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
+
+	"github.com/celerway/openwrt-versions/openwrt"
+	"github.com/celerway/openwrt-versions/pkgidx"
 )
 
 //go:embed .version
@@ -51,7 +52,22 @@ func run(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("addon packages: %w", err)
 	}
-	UpstreamPackages = append(UpstreamPackages, addonPackages...)
+
+	// UpstreamPackages = append(UpstreamPackages, addonPackages...)
+	mergedPackages := make(map[string]string)
+	for name, pkg := range UpstreamPackages {
+		mergedPackages[name] = pkg
+	}
+	for name, pkg := range addonPackages {
+		if existingPkg, exists := mergedPackages[name]; exists {
+			// Handle merging logic if needed, for now, we just overwrite
+			mergedPackages[name] = existingPkg
+		} else {
+			mergedPackages[name] = pkg
+		}
+	}
+	UpstreamPackages = mergedPackages
+
 	// Load the downstream packages, see if there is an argument on the command line
 	// to read from a file instead of stdin
 	var input io.Reader
