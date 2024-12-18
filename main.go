@@ -43,27 +43,51 @@ func run(ctx context.Context, args []string) error {
 	}
 	baseUrl := openwrt.GetBasePackageUrl(*version)
 	addonUrl := openwrt.GetAddOnPackageUrl(*version)
+	luciUrl := openwrt.GetLuciPackageUrl(*version)
+	routingUrl := openwrt.GetRoutingPackageUrl(*version)
+	telephonyUrl := openwrt.GetTelephonyPackageUrl(*version)
 
-	UpstreamPackages, err := pkgidx.LoadFromURL(ctx, baseUrl)
+	UpstreamPackages := make(map[string]string)
+
+	packages, err := pkgidx.LoadFromURL(ctx, baseUrl)
 	if err != nil {
 		return fmt.Errorf("base packages: %w", err)
 	}
-	addonPackages, err := pkgidx.LoadFromURL(ctx, addonUrl)
+	for name, pkg := range packages {
+		UpstreamPackages[name] = pkg
+	}
+
+	packages, err = pkgidx.LoadFromURL(ctx, addonUrl)
 	if err != nil {
 		return fmt.Errorf("addon packages: %w", err)
 	}
+	for name, pkg := range packages {
+		UpstreamPackages[name] = pkg
+	}
 
-	// UpstreamPackages = append(UpstreamPackages, addonPackages...)
-	mergedPackages := make(map[string]string)
-	for name, pkg := range UpstreamPackages {
-		// fmt.Println(name)
-		mergedPackages[name] = pkg
+	packages, err = pkgidx.LoadFromURL(ctx, luciUrl)
+	if err != nil {
+		return fmt.Errorf("luci packages: %w", err)
 	}
-	for name, pkg := range addonPackages {
-		// fmt.Println(name)
-		mergedPackages[name] = pkg
+	for name, pkg := range packages {
+		UpstreamPackages[name] = pkg
 	}
-	UpstreamPackages = mergedPackages
+
+	packages, err = pkgidx.LoadFromURL(ctx, routingUrl)
+	if err != nil {
+		return fmt.Errorf("routing packages: %w", err)
+	}
+	for name, pkg := range packages {
+		UpstreamPackages[name] = pkg
+	}
+
+	packages, err = pkgidx.LoadFromURL(ctx, telephonyUrl)
+	if err != nil {
+		return fmt.Errorf("telephony packages: %w", err)
+	}
+	for name, pkg := range packages {
+		UpstreamPackages[name] = pkg
+	}
 
 	// Load the downstream packages, see if there is an argument on the command line
 	// to read from a file instead of stdin
@@ -139,6 +163,10 @@ func run(ctx context.Context, args []string) error {
 			downstreamWidth = len(pkg.DownstreamVersion)
 		}
 	}
+
+	// Print the header
+	fmt.Printf("%-*s | %-*s | %-*s\n", nameWidth, "Name", upstreamWidth, "Upstream", downstreamWidth, "Downstream")
+	fmt.Printf("%s-+-%s-+-%s\n", strings.Repeat("-", nameWidth), strings.Repeat("-", upstreamWidth), strings.Repeat("-", downstreamWidth))
 
 	// Print the package information
 	for _, pkg := range cwyOnly {
